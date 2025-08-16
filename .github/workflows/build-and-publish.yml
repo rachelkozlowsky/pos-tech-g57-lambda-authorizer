@@ -1,0 +1,48 @@
+--- /dev/null
+  +++ b/lambda-authorizer-cpf-code/.github/workflows/build-and-publish.yml
+  @@ -0,0 +1,45 @@
++name: Build and Publish Lambda Artifact
+  +
++on:
++  push:
++    tags:
+  +      - 'v*.*.*' # Executa apenas quando uma tag de versão é criada
+  +
++jobs:
++  build-and-publish:
++    runs-on: ubuntu-latest
++    permissions:
++      id-token: write # Necessário para autenticação com a AWS
++      contents: read
+  +
++    steps:
++      - name: Checkout code
++        uses: actions/checkout@v4
+  +
++      - name: Set up Python
++        uses: actions/setup-python@v5
++        with:
++          python-version: '3.12'
+  +
++      - name: Install dependencies
++        run: |
+  +          python -m pip install --upgrade pip
+  +          pip install -r requirements.txt -t ./package
+  +        # Se não houver requirements.txt, este passo pode ser removido
+  +
++      - name: Create zip package
++        run: |
+  +          cp -r src/* ./package/
+  +          cd package
+  +          zip -r ../lambda.zip .
+  +
++      - name: Configure AWS Credentials
++        uses: aws-actions/configure-aws-credentials@v4
++        with:
++          role-to-assume: arn:aws:iam::ACCOUNT_ID:role/GitHubAction-Lambda-Artifact-Publisher # Substitua pelo ARN do seu Role
++          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+  +
++      - name: Upload to S3
++        run: |
+  +          aws s3 cp lambda.zip s3://SEU-BUCKET-DE-ARTEFATOS/authorizer/${{ github.ref_name }}.zip
+  +          # Ex: s3://postech-g57-lambda-artifacts/authorizer/v1.0.0.zip
